@@ -487,37 +487,6 @@ blockquote {
   @include fonticon("\2a", left);
 }
 
-//Controlbar Icons
-.alwaysonhighlights-icon {
-  @include fonticon("\e01b", left);
-  color: rgb(211, 211, 211);
-  font-size: 18px;
-  bottom: 1px;
-  left: 3px;
-  position: absolute;
-  // text-shadow: -0.1em -0.1em #999;
-}
-
-.highlighter-icon {
-  @include fonticon("\e01a", left);
-  color: rgb(211, 211, 211);
-  font-size: 18px;
-  bottom: 1px;
-  left: 3px;
-  position: absolute;
-  // text-shadow: -0.1em -0.1em #999;
-}
-
-.commenter-icon {
-  @include fonticon("\e01e", left);
-  color: rgb(211, 211, 211);
-  font-size: 18px;
-  bottom: 1px;
-  left: 3px;
-  position: absolute;
-  // text-shadow: -0.1em -0.1em #999;
-}
-
 //VISIBILITY
 .visibility {
   .dropdown-toggle {
