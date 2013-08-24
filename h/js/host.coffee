@@ -16,13 +16,6 @@ class Annotator.Host extends Annotator.Guest
     tick: false
 
   constructor: (element, options) ->
-    Gettext.prototype.parse_locale_data annotator_locale_data
-
-    @app = options.app
-    delete options.app
-
-    super
-
     # Create the iframe
     if document.baseURI and window.PDFView?
       # XXX: Hack around PDF.js resource: origin. Bug in jschannel?
@@ -32,12 +25,18 @@ class Annotator.Host extends Annotator.Guest
       # XXX: Hack for missing window.location.origin in FF
       hostOrigin ?= window.location.protocol + "//" + window.location.host
 
-    @frame = $('<iframe></iframe>')
-    .css(display: 'none')
-    .attr('src', "#{@app}#/?xdm=#{encodeURIComponent(hostOrigin)}")
-    .appendTo(@wrapper)
-    .addClass('annotator-frame annotator-outer annotator-collapsed')
-    .bind 'load', => @frame.css('display', '')
+    app = $('<iframe></iframe>')
+    .attr('src', "#{options.app}#/?xdm=#{encodeURIComponent(hostOrigin)}")
+
+    super
+
+    app.appendTo(@frame)
+
+    if @toolbar
+      @toolbar.hide()
+      app
+      .on('mouseenter', => @toolbar.show())
+      .on('mouseleave', => @toolbar.hide())
 
   _setupXDM: (options) ->
     channel = super
@@ -66,22 +65,6 @@ class Annotator.Host extends Annotator.Guest
         window.requestAnimationFrame this._dragRefresh
     )
 
-    .bind('addComment', (ctx) =>
-      sel = @selectedRanges   # Save the selection
-      adderShown = @adder.is ":visible" # Save the state of adder icon
-
-      # Nuke the selection, since we won't be using that.
-      # We will attach this to the end of the document.
-      # Our override for setupAnnotation will add that highlight.
-      @selectedRanges = []    
-
-      this.onAdderClick()     # Open editor (with 0 targets)
-      setTimeout (=>          # At some point, later
-        @selectedRanges = sel # restore the selection
-        if adderShown then @adder.show() # restore the state of addder icon
-      ), 200
-    )
-
     .bind('getMaxBottom', =>
       sel = '*' + (":not(.annotator-#{x})" for x in [
         'adder', 'outer', 'notice', 'filter', 'frame'
@@ -101,10 +84,6 @@ class Annotator.Host extends Annotator.Guest
         else
           0
       Math.max.apply(Math, all)
-    )
-
-    .bind('scrollTop', (ctx, y) =>
-      $('html, body').stop().animate {scrollTop: y}, 600
     )
 
     .bind('setDrag', (ctx, drag) =>
@@ -138,36 +117,3 @@ class Annotator.Host extends Annotator.Guest
     @frame.css
       'margin-left': "#{m}px"
       width: "#{w}px"
-
-  showViewer: (annotations) => @plugins.Bridge.showViewer annotations
-  updateViewer: (annotations) => @plugins.Bridge.updateViewer annotations
-  showEditor: (annotation) => @plugins.Bridge.showEditor annotation
-
-  createFakeCommentRange: ->
-    posSelector =
-      type: "TextPositionSelector"
-      start: @domMapper.corpus.length - 1
-      end: @domMapper.corpus.length
-
-    anchor = this.findAnchorFromPositionSelector selector: [posSelector]
-
-    anchor.range
-
-  # Override for setupAnnotation
-  setupAnnotation: (annotation) ->
-    # Set up annotation as usual     
-    annotation = super(annotation)
-    # Does it have proper highlights?
-    unless annotation.highlights?.length or annotation.references?.length or annotation.target?.length
-      # No highlights and no references means that this is a comment,
-      # or re-attachment has failed, but we'll skip orphaned annotations.
-
-      # Get a fake range at the end of the document, and highlight it
-      range = this.createFakeCommentRange()
-      hl = this.highlightRange range
-
-      # Register this highlight for the annotation, and vica versa
-      $.merge annotation.highlights, hl
-      $(hl).data('annotation', annotation)
-
-    annotation
