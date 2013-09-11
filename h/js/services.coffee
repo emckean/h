@@ -212,11 +212,11 @@ class Hypothesis extends Annotator
       # Pop out the sidebar
       $rootScope.$apply => this.show())
 
-    .bind('showViewer', (ctx, tags=[]) =>
+    .bind('showViewer', (ctx, ids=[]) =>
       this.showViewer ((@threading.getContainer id).message for id in ids)
     )
 
-    .bind('updateViewer', (ctx, tags=[]) =>
+    .bind('updateViewer', (ctx, ids=[]) =>
       this.updateViewer ((@threading.getContainer id).message for id in ids)
     )
 
@@ -354,7 +354,9 @@ class Hypothesis extends Annotator
     @element.scope().frame.visible = false
 
   setDynamicBucketMode: (value) =>
-    @element.scope().dynamicBucket = value
+    for p in @providers
+      p.channel.notify
+        method: 'setDynamicBucketMode', params: value
 
   patch_store: ->
     $location = @element.injector().get '$location'
@@ -382,6 +384,9 @@ class Hypothesis extends Annotator
     # if the annotation has a newly-assigned id and ensures that the id
     # is enumerable.
     Store.prototype.updateAnnotation = (annotation, data) =>
+      unless Object.keys(data).length
+        return
+
       if annotation.id? and annotation.id != data.id
         # Update the id table for the threading
         thread = @threading.getContainer annotation.id
@@ -405,6 +410,7 @@ class Hypothesis extends Annotator
 
       # Update the annotation with the new data
       annotation = angular.extend annotation, data
+      @plugins.Bridge?.updateAnnotation annotation
 
       # Give angular a chance to react
       $rootScope.$digest()
@@ -431,7 +437,9 @@ class Hypothesis extends Annotator
     for ref in (annotation.references?.slice().reverse() or [])
       rel = (@threading.getContainer ref).message
       if rel?
-        @element.injector().get('$timeout') (=> this.updateAnnotation rel), 10
+        $timeout = @element.injector().get('$timeout')
+        $timeout (=> @plugins.Bridge.updateAnnotation rel), 10
+        this.updateAncestors(rel)
         break  # Only the nearest existing ancestor, the rest is by induction.
 
   serviceDiscovery: (options) =>
