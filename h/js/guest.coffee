@@ -67,6 +67,10 @@ class Annotator.Guest extends Annotator
           $(this).removeClass('annotator-hl-active')
     )
 
+    .bind('setDynamicBUcket', (ctx, value) =>
+      @plugins.Heatmap?.dynamicBucket = value
+    )
+
     .bind('adderClick', =>
       @onAdderClick @event
     )
@@ -103,9 +107,13 @@ class Annotator.Guest extends Annotator
   _setupViewer: -> this
   _setupEditor: -> this
 
-  showViewer: (annotation) => @plugins.Bridge.showViewer annotation
+  showViewer: (annotations) =>
+    @panel?.notify method: "showViewer", params: (a.id for a in annotations)
+
+  updateViewer: (annotations) =>
+    @panel?.notify method: "updateViewer", params: (a.id for a in annotations)
+
   showEditor: (annotation) => @plugins.Bridge.showEditor annotation
-  updateViewer: (annotations) => @plugins.Bridge.updateViewer annotations
 
   checkForStartSelection: (event) =>
     # Override to prevent Annotator choking when this ties to access the
