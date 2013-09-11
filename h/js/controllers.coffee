@@ -554,7 +554,6 @@ class Annotation
       switch $scope.action
         when 'create'
           annotator.publish 'annotationCreated', annotation
-          $scope.$emit 'updateReplies'
         when 'delete'
           root = $scope.$root.annotations
           root = (a for a in root when a isnt root)
@@ -576,13 +575,11 @@ class Annotation
         else
           [$scope.thread.message.id]
 
-      reply = angular.extend annotator.createAnnotation(),
+      reply =
         references: references
         uri: $scope.thread.message.uri
 
-      # XXX: This is ugly -- it's the one place we refer to the plugin directly
-      annotator.plugins.Threading.thread reply
-      $scope.$emit 'updateReplies'
+      annotator.publish 'beforeAnnotationCreated', [reply]
 
     $scope.edit = ($event) ->
       $event?.stopPropagation()
@@ -610,7 +607,6 @@ class Annotation
                 annotator.deleteAnnotation reply
 
           annotator.deleteAnnotation annotation
-          $scope.$emit 'updateReplies'
       else
         $scope.action = 'delete'
         $scope.editing = true
@@ -626,10 +622,10 @@ class Annotation
 
     $scope.$watch 'model.$modelValue.id', (id) ->
       if id?
-        $scope.thread = threading.getContainer id
+        annotation = $scope.model.$modelValue
+        $scope.thread = annotation.thread
 
         # Check if this is a brand new annotation
-        annotation = $scope.thread.message
         if annotation? and drafts.contains annotation
           $scope.editing = true
 
@@ -648,6 +644,14 @@ class Annotation
         $scope.shared_link = prefix + '/a/' + $scope.model.$modelValue.id
         $scope.shared = false
 
+    $scope.$watchCollection 'model.$modelValue.thread.children', (newValue=[]) ->
+      annotation = $scope.model.$modelValue
+      return unless annotation
+
+      replies = (r.message for r in newValue)
+      replies = replies.sort(annotator.sortAnnotations).reverse()
+      annotation.reply_list = replies
+
     $scope.toggle = ->
       $element.find('.share-dialog').slideToggle()
 
@@ -663,14 +667,6 @@ class Annotation
         for regexp in annotator.text_regexp
           $scope.model.$modelValue.highlightText =
             $scope.model.$modelValue.highlightText.replace regexp, annotator.highlighter
-
-    $scope.$on 'updateReplies', ->
-      unless $scope.model.$modelValue.references?.length
-        return
-
-      thread = threading.getContainer $scope.model.$modelValue.id
-      reply_list = (r.message for r in (thread.children or []))
-      $scope.model.$modelValue.reply_list = reply_list.sort(annotator.sortAnnotations).reverse()
 
 
 class Editor
@@ -728,27 +724,11 @@ class Viewer
           method: 'setActiveHighlights'
           params: highlights
 
-    $scope.replies = (annotation) ->
-      thread = threading.getContainer annotation.id
-      (r.message for r in (thread.children or []))
-
-    sortAnnotations: (a, b) ->
-      a_upd = if a.updated? then new Date(a.updated) else new Date()
-      b_upd = if b.updated? then new Date(b.updated) else new Date()
-      a_upd.getTime() - b_upd.getTime()
-
-    $scope.$on 'updateReplies', ->
-      console.log 'top updateReplies'
-      for annotation in $rootScope.annotations
-        thread = threading.getContainer annotation.id
-        reply_list = (r.message for r in (thread.children or []))
-        annotation.reply_list = reply_list.sort(@sortAnnotations).reverse()
-
 
 class Search
   this.$inject = ['$filter', '$location', '$routeParams', '$scope', 'annotator']
   constructor: ($filter, $location, $routeParams, $scope, annotator) ->
-    {providers, threading} = annotator
+    {providers, threading, plugins} = annotator
 
     $scope.highlighter = '<span class="search-hl-active">$&</span>'
     $scope.filter_orderBy = $filter('orderBy')
@@ -828,9 +808,9 @@ class Search
       threads = []
       $scope.render_order = {}
       # Choose the root annotations to work with
-      for annotation in $scope.annotations
+      for annotation in plugins.Store.annotations
         # The annotation itself is a hit.
-        thread = annotator.threading.getContainer annotation.id
+        thread = annotation.thread
 
         if annotation.id in $scope.search_filter
           threads.push thread
@@ -961,12 +941,6 @@ class Search
         $scope.ann_info.more_top[next_id] = false
         $scope.ann_info.shown[next_id] = true
         pos += 1
-
-    $scope.$on 'updateReplies', ->
-      for annotation in $scope.threads
-        thread = threading.getContainer annotation.id
-        reply_list = (r.message for r in (thread.children or []))
-        annotation.reply_list = reply_list.sort(annotator.sortAnnotations).reverse()
 
     refresh()
 
