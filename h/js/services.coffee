@@ -200,17 +200,15 @@ class Hypothesis extends Annotator
     .bind('back', =>
       # This guy does stuff when you "back out" of the interface.
       # (Currently triggered by a click on the source page.)
-      return unless drafts.discard()
-      $rootScope.$apply => this.hide()
-    )
-
-    .bind('setDynamicBucketMode', (ctx, value) => $rootScope.$apply =>
-       this.setDynamicBucketMode value
+      $rootScope.$apply =>
+        return unless drafts.discard()
+        this.hide()
     )
 
     .bind('open', =>
       # Pop out the sidebar
-      $rootScope.$apply => this.show())
+      $rootScope.$apply => this.show()
+    )
 
     .bind('showViewer', (ctx, ids=[]) =>
       this.showViewer ((@threading.getContainer id).message for id in ids)
@@ -352,11 +350,6 @@ class Hypothesis extends Annotator
 
   hide: =>
     @element.scope().frame.visible = false
-
-  setDynamicBucketMode: (value) =>
-    for p in @providers
-      p.channel.notify
-        method: 'setDynamicBucketMode', params: value
 
   patch_store: ->
     $location = @element.injector().get '$location'

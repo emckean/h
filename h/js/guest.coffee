@@ -67,10 +67,6 @@ class Annotator.Guest extends Annotator
           $(this).removeClass('annotator-hl-active')
     )
 
-    .bind('setDynamicBUcket', (ctx, value) =>
-      @plugins.Heatmap?.dynamicBucket = value
-    )
-
     .bind('adderClick', =>
       @onAdderClick @event
     )
