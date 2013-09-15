@@ -178,7 +178,7 @@ class Annotator.Guest extends Annotator
     # Collect relevant annotations
     annotations = $(event.target)
       .parents('.annotator-hl')
-      .andSelf()
+      .addBack()
       .map -> return $(this).data("annotation")
 
     # Tell sidebar to show the viewer for these annotations
