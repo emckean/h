@@ -237,6 +237,10 @@ $baseFontSize: 14px;
     margin-left: 0;
   }
 
+  * {
+    font-size: 100%;
+  }
+
   & > iframe {
     @include reset-box-model;
     height: 100%;
