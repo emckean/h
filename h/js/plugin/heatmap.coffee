@@ -38,7 +38,7 @@ class Annotator.Plugin.Heatmap extends Annotator.Plugin
 
   constructor: (element, options) ->
     super $(@html), options
-    this._rebaseUrls()
+    # this._rebaseUrls() -- not clear this is a great idea
 
     if @options.container?
       $(@options.container).append @element
